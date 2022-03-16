@@ -76,6 +76,7 @@ from .electronic_structure_driver_result import ElectronicStructureDriverResult
 from .electronic_energy import ElectronicEnergy
 from .magnetization import Magnetization
 from .particle_number import ParticleNumber
+from .electronic_density import ElectronicDensity
 
 __all__ = [
     "AngularMomentum",
@@ -85,4 +86,5 @@ __all__ = [
     "ElectronicEnergy",
     "Magnetization",
     "ParticleNumber",
+    "ElectronicDensity",
 ]
