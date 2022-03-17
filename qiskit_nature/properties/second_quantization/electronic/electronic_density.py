@@ -41,7 +41,7 @@ class ElectronicDensity(IntegralProperty):
         """
         Args:
         """
-        super().__init__(self.__class__.__name__, electronic_integrals)
+        super().__init__(self .__class__.__name__, electronic_integrals)
         self._norbs = self.get_electronic_integral(ElectronicBasis.MO, 1)._matrices[0].shape[0]
         self._diag_indices: List[int]
         self._aux_ops_offset: int
