@@ -15,11 +15,7 @@
 import unittest
 import warnings
 
-from test import QiskitNatureTestCase
-
-import numpy as np
-
-from qiskit.opflow import PauliSumOp
+from test import QiskitNatureDeprecatedTestCase
 
 from qiskit_nature.drivers.second_quantization import GaussianForcesDriver
 from qiskit_nature.mappers.second_quantization import DirectMapper
@@ -28,23 +24,12 @@ from qiskit_nature.properties.second_quantization.vibrational.bases import Harmo
 from .resources.reference_direct_mapper import _num_modals_2_q_op, _num_modals_3_q_op
 
 
-class TestDirectMapper(QiskitNatureTestCase):
+class TestDirectMapper(QiskitNatureDeprecatedTestCase):
     """Test Direct Mapper"""
-
-    def compare_pauli_sum_op(self, first: PauliSumOp, second: PauliSumOp, msg: str = None) -> None:
-        """Compares two PauliSumOp instances."""
-        for (f_lbl, f_coeff), (s_lbl, s_coeff) in zip(
-            first.primitive.to_list(), second.primitive.to_list()
-        ):
-            if f_lbl != s_lbl:
-                raise self.failureException(msg)
-            if not np.isclose(f_coeff, s_coeff):
-                raise self.failureException(msg)
 
     def setUp(self) -> None:
         """Setup."""
         super().setUp()
-        self.addTypeEqualityFunc(PauliSumOp, self.compare_pauli_sum_op)
 
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=DeprecationWarning)

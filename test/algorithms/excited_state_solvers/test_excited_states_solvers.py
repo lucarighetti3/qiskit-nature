@@ -13,7 +13,7 @@
 """ Test Numerical qEOM excited states calculation """
 
 import unittest
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 import numpy as np
 from qiskit import BasicAer
 from qiskit.utils import algorithm_globals, QuantumInstance
@@ -38,7 +38,7 @@ from qiskit_nature.algorithms import (
 import qiskit_nature.optionals as _optionals
 
 
-class TestNumericalQEOMESCCalculation(QiskitNatureTestCase):
+class TestNumericalQEOMESCCalculation(QiskitNatureDeprecatedTestCase):
     """Test Numerical qEOM excited states calculation"""
 
     @unittest.skipIf(not _optionals.HAS_PYSCF, "pyscf not available.")
@@ -123,7 +123,7 @@ class TestNumericalQEOMESCCalculation(QiskitNatureTestCase):
         self._solve_with_vqe_mes(converter)
 
     def _solve_with_vqe_mes(self, converter: QubitConverter):
-        solver = VQEUCCFactory(self.quantum_instance)
+        solver = VQEUCCFactory(quantum_instance=self.quantum_instance)
         gsc = GroundStateEigensolver(converter, solver)
         esc = QEOM(gsc, "sd")
         results = esc.solve(self.electronic_structure_problem)

@@ -12,7 +12,7 @@
 
 """Ground state computation using a minimum eigensolver."""
 
-from typing import Union, List, Optional, Dict
+from typing import Union, List, Optional, Dict, Tuple
 
 import numpy as np
 from qiskit import QuantumCircuit
@@ -30,6 +30,7 @@ from qiskit_nature.problems.second_quantization import BaseProblem
 from qiskit_nature.results import EigenstateResult
 from .ground_state_solver import GroundStateSolver
 from .minimum_eigensolver_factories import MinimumEigensolverFactory
+from ...deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 
 
 class GroundStateEigensolver(GroundStateSolver):
@@ -49,6 +50,14 @@ class GroundStateEigensolver(GroundStateSolver):
         """
         super().__init__(qubit_converter)
         self._solver = solver
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name="qiskit_nature.algorithms.ground_state_solvers.GroundStateEigensolver",
+            new_type=DeprecatedType.CLASS,
+            new_name="qiskit_nature.second_q.algorithms.ground_state_solvers.GroundStateEigensolver",
+            category=NatureDeprecationWarning,
+        )
 
     @property
     def solver(self) -> Union[MinimumEigensolver, MinimumEigensolverFactory]:
@@ -87,11 +96,21 @@ class GroundStateEigensolver(GroundStateSolver):
             An interpreted :class:`~.EigenstateResult`. For more information see also
             :meth:`~.BaseProblem.interpret`.
         """
-        # get the operator and auxiliary operators, and transform the provided auxiliary operators
-        # note that ``aux_ops`` contains not only the transformed ``aux_operators`` passed by the
+        main_operator, aux_ops = self.get_qubit_operators(problem, aux_operators)
+        raw_mes_result = self._solver.compute_minimum_eigenvalue(main_operator, aux_ops)  # type: ignore
+
+        result = problem.interpret(raw_mes_result)
+        return result
+
+    def get_qubit_operators(
+        self,
+        problem: BaseProblem,
+        aux_operators: Optional[ListOrDictType[Union[SecondQuantizedOp, PauliSumOp]]] = None,
+    ) -> Tuple[PauliSumOp, Optional[ListOrDictType[PauliSumOp]]]:
+        """Gets the operator and auxiliary operators, and transforms the provided auxiliary operators"""
+        # Note that ``aux_ops`` contains not only the transformed ``aux_operators`` passed by the
         # user but also additional ones from the transformation
         second_q_ops = problem.second_q_ops()
-
         aux_second_q_ops: ListOrDictType[SecondQuantizedOp]
         if isinstance(second_q_ops, list):
             main_second_q_op = second_q_ops[0]
@@ -105,14 +124,12 @@ class GroundStateEigensolver(GroundStateSolver):
                     "`None`."
                 )
             aux_second_q_ops = second_q_ops
-
         main_operator = self._qubit_converter.convert(
             main_second_q_op,
             num_particles=problem.num_particles,
             sector_locator=problem.symmetry_sector_locator,
         )
         aux_ops = self._qubit_converter.convert_match(aux_second_q_ops)
-
         if aux_operators is not None:
             wrapped_aux_operators: ListOrDict[Union[SecondQuantizedOp, PauliSumOp]] = ListOrDict(
                 aux_operators
@@ -136,15 +153,10 @@ class GroundStateEigensolver(GroundStateSolver):
         if isinstance(self._solver, MinimumEigensolverFactory):
             # this must be called after transformation.transform
             self._solver = self._solver.get_solver(problem, self._qubit_converter)
-
         # if the eigensolver does not support auxiliary operators, reset them
         if not self._solver.supports_aux_operators():
             aux_ops = None
-
-        raw_mes_result = self._solver.compute_minimum_eigenvalue(main_operator, aux_ops)
-
-        result = problem.interpret(raw_mes_result)
-        return result
+        return main_operator, aux_ops
 
     def evaluate_operators(
         self,
@@ -173,10 +185,14 @@ class GroundStateEigensolver(GroundStateSolver):
             The expectation value of the given operator(s). The return type will be identical to the
             format of the provided operators.
         """
-        # try to get a QuantumInstance from the solver
-        quantum_instance = getattr(self._solver, "quantum_instance", None)
-        # and try to get an Expectation from the solver
-        expectation = getattr(self._solver, "expectation", None)
+        if isinstance(self._solver, MinimumEigensolverFactory):
+            # try to get a QuantumInstance from the solver
+            quantum_instance = getattr(self._solver.minimum_eigensolver, "quantum_instance", None)
+            # and try to get an Expectation from the solver
+            expectation = getattr(self._solver.minimum_eigensolver, "expectation", None)
+        else:
+            quantum_instance = getattr(self._solver, "quantum_instance", None)
+            expectation = getattr(self._solver, "expectation", None)
 
         if not isinstance(state, StateFn):
             state = StateFn(state)

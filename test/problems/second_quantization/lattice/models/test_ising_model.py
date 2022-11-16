@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -17,7 +17,7 @@ from test import QiskitNatureTestCase
 
 import numpy as np
 from numpy.testing import assert_array_equal
-from retworkx import PyGraph, is_isomorphic
+from rustworkx import PyGraph, is_isomorphic
 
 from qiskit_nature.problems.second_quantization.lattice import IsingModel, Lattice
 

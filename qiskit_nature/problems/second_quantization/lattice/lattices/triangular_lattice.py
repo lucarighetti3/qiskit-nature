@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -17,7 +17,7 @@ from math import pi
 from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
-from retworkx import PyGraph
+from rustworkx import PyGraph
 
 from .lattice import LatticeDrawStyle, Lattice
 from .boundary_condition import BoundaryCondition
@@ -239,9 +239,9 @@ class TriangularLattice(Lattice):
 
         Args:
             self_loop: Draw self-loops in the lattice. Defaults to False.
-            style : Styles for retworkx.visualization.mpl_draw.
+            style : Styles for rustworkx.visualization.mpl_draw.
                 Please see
-                https://qiskit.org/documentation/retworkx/stubs/retworkx.visualization.mpl_draw.html#retworkx.visualization.mpl_draw
+                https://qiskit.org/documentation/rustworkx/stubs/rustworkx.visualization.mpl_draw.html#rustworkx.visualization.mpl_draw
                 for details.
         """
         graph = self.graph

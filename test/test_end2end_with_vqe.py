@@ -14,40 +14,33 @@
 
 import unittest
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 from qiskit import BasicAer
 from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import COBYLA
 from qiskit.circuit.library import TwoLocal
 from qiskit.utils import algorithm_globals, QuantumInstance
-from qiskit_nature.drivers.second_quantization import HDF5Driver
-from qiskit_nature.mappers.second_quantization import ParityMapper
-from qiskit_nature.converters.second_quantization.qubit_converter import QubitConverter
-from qiskit_nature.problems.second_quantization.electronic import ElectronicStructureProblem
+import qiskit_nature.optionals as _optionals
+from qiskit_nature.second_q.drivers import PySCFDriver
+from qiskit_nature.second_q.mappers import ParityMapper, QubitConverter
 
 
-class TestEnd2End(QiskitNatureTestCase):
+@unittest.skipIf(not _optionals.HAS_PYSCF, "pyscf not available.")
+class TestEnd2End(QiskitNatureDeprecatedTestCase):
     """End2End VQE tests."""
 
     def setUp(self):
         super().setUp()
         algorithm_globals.random_seed = 42
 
-        driver = HDF5Driver(
-            hdf5_input=self.get_resource_path(
-                "test_driver_hdf5.hdf5", "drivers/second_quantization/hdf5d"
-            )
-        )
-        problem = ElectronicStructureProblem(driver)
-        second_q_ops = [problem.second_q_ops()[problem.main_property_name]]
+        driver = PySCFDriver()
+        problem = driver.run()
+        main_op, aux_ops = problem.second_q_ops()
         converter = QubitConverter(mapper=ParityMapper(), two_qubit_reduction=True)
-        num_particles = (
-            problem.grouped_property_transformed.get_property("ParticleNumber").num_alpha,
-            problem.grouped_property_transformed.get_property("ParticleNumber").num_beta,
-        )
-        self.qubit_op = converter.convert(second_q_ops[0], num_particles)
-        self.aux_ops = converter.convert_match(second_q_ops[1:])
+        num_particles = problem.num_particles
+        self.qubit_op = converter.convert(main_op, num_particles)
+        self.aux_ops = converter.convert_match(aux_ops)
         self.reference_energy = -1.857275027031588
 
     def test_end2end_h2(self):

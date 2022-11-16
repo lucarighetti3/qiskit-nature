@@ -26,6 +26,7 @@ from qiskit_nature import QiskitNatureError
 from qiskit_nature.operators.second_quantization import VibrationalOp
 
 from ..bases import VibrationalBasis
+from .....deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 
 
 class VibrationalIntegrals(ABC):
@@ -57,6 +58,17 @@ class VibrationalIntegrals(ABC):
         Raises:
             ValueError: if the number of body terms is less than 1.
         """
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name=(
+                "qiskit_nature.properties.second_quantization.vibrational.integrals."
+                "VibrationalIntegrals"
+            ),
+            new_type=DeprecatedType.CLASS,
+            new_name="qiskit_nature.second_q.operators.PolynomialTensor",
+            category=NatureDeprecationWarning,
+        )
         self._validate_num_body_terms(num_body_terms)
         self.name = f"{num_body_terms}Body{self.__class__.__name__}"
         self._num_body_terms = num_body_terms
@@ -144,7 +156,9 @@ class VibrationalIntegrals(ABC):
             A new instance of this class.
         """
         integrals = []
-        for coeff, ints in zip(h5py_group["coefficients"][...], h5py_group["integrals"][...]):
+        for coeff, ints in zip(
+            h5py_group["coefficients"][Ellipsis], h5py_group["integrals"][Ellipsis]
+        ):
             integrals.append((coeff, tuple(ints)))
 
         ret = VibrationalIntegrals(h5py_group.attrs["num_body_terms"], integrals)

@@ -26,7 +26,7 @@ on:
     - cron: '0 1 * * *'
 
 concurrency:
-  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}
+  group: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
   cancel-in-progress: true
 
 jobs:
@@ -39,32 +39,41 @@ jobs:
     steps:
       - name: Print Concurrency Group
         env:
-          CONCURRENCY_GROUP: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}
+          CONCURRENCY_GROUP: ${{ github.repository }}-${{ github.ref }}-${{ github.head_ref }}-${{ github.workflow }}
         run: |
           echo -e "\033[31;1;4mConcurrency Group\033[0m"
           echo -e "$CONCURRENCY_GROUP\n"
         shell: bash
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            setup.py
+            requirements.txt
+            requirements-dev.txt
       - name: Create conda environment
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
-          conda create -n psi4env python=${{ matrix.python-version }}
+          conda create -y -n psi4env python=${{ matrix.python-version }}
         shell: bash
       - uses: ./.github/actions/install-main-dependencies
         with:
           os: ${{ matrix.os }}
+          python-version: ${{ matrix.python-version }}
+          use-conda: "true"
         if: ${{ !startsWith(github.ref, 'refs/heads/stable') && !startsWith(github.base_ref, 'stable/') }}
       - uses: ./.github/actions/install-nature
+        with:
+          use-conda: "true"
       - name: Install Dependencies
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate psi4env
-          pip install jupyter sphinx_rtd_theme qiskit-terra[visualization]
+          pip install jupyter qiskit-terra[visualization]
           sudo apt-get install -y pandoc graphviz
           sudo apt-get -y install python3-enchant
           sudo apt-get -y install hunspell-en-us
@@ -88,7 +97,7 @@ jobs:
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate psi4env
-          make copyright
+          python tools/check_copyright.py -check
         if: ${{ !cancelled() }}
         shell: bash
       - name: Spell Check
@@ -111,14 +120,14 @@ jobs:
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate psi4env
           make clean_sphinx
-          make html SPHINXOPTS=-W
+          make html
           cd docs/_build/html
           mkdir artifacts
           tar -zcvf artifacts/documentation.tar.gz --exclude=./artifacts .
         if: ${{ !cancelled() }}
         shell: bash
       - name: Run upload documentation
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: documentation
           path: docs/_build/html/artifacts/documentation.tar.gz
@@ -147,35 +156,44 @@ jobs:
           - os: windows-2019
             python-version: '3.10'
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+          cache-dependency-path: |
+            setup.py
+            requirements.txt
+            requirements-dev.txt
       - name: Create conda environment
         run: |
           if [ "${{ matrix.os }}" == "macos-latest" ]; then
             sudo chown -R $USER: "$CONDA"
           fi
           source "$CONDA/etc/profile.d/conda.sh"
-          conda create -n psi4env python=${{ matrix.python-version }}
+          conda create -y -n psi4env python=${{ matrix.python-version }}
         shell: bash
-      - uses: ./.github/actions/install-psi4
+      - name: Install PSI4
+        uses: ./.github/actions/install-psi4
         with:
           os: ${{ matrix.os }}
           python-version: ${{ matrix.python-version }}
-        if: ${{ matrix.python-version != '3.10' }}
-      - uses: ./.github/actions/install-main-dependencies
-        with:
-          os: ${{ matrix.os }}
-        if: ${{ !startsWith(github.ref, 'refs/heads/stable') && !startsWith(github.base_ref, 'stable/') }}
-      - uses: ./.github/actions/install-nature
-      - name: Install Dependencies
+        if: ${{ matrix.os != 'windows-2019' || (matrix.os == 'windows-2019' && matrix.python-version != '3.10') }}
+      - name: Install PyQuante2
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate psi4env
-          conda install -c rpmuller pyquante2_pure
-        if: ${{ matrix.python-version != '3.10' }}
+          conda install -y pyquante2_pure -c rpmuller
         shell: bash
+      - uses: ./.github/actions/install-main-dependencies
+        with:
+          os: ${{ matrix.os }}
+          python-version: ${{ matrix.python-version }}
+          use-conda: "true"
+        if: ${{ !startsWith(github.ref, 'refs/heads/stable') && !startsWith(github.base_ref, 'stable/') }}
+      - uses: ./.github/actions/install-nature
+        with:
+          use-conda: "true"
       - name: Set up problem matches
         run: |
           echo "::add-matcher::./.github/problem_matchers/pylint.json"
@@ -198,9 +216,20 @@ jobs:
         run: |
           source "$CONDA/etc/profile.d/conda.sh"
           conda activate psi4env
-          pip install -U pylint
+          pip install -U -r requirements-dev.txt
           make lint
         shell: bash
+      - name: Stestr Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            .stestr
+            .stestr1
+          key: stestr-${{ matrix.os }}-${{ matrix.python-version }}-${{ github.run_id }}-${{ github.run_number }}-${{ github.run_attempt }}
+          restore-keys: |
+            stestr-${{ matrix.os }}-${{ matrix.python-version }}-
+            stestr-${{ matrix.os }}-
+        if: ${{ !cancelled() }}
       - name: Nature Unit Tests under Python ${{ matrix.python-version }}
         uses: ./.github/actions/run-tests
         with:
@@ -223,38 +252,61 @@ jobs:
           mv .coverage ./ci-artifact-data/nat.dat
         if: ${{ matrix.python-version == 3.7 }}
         shell: bash
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: ${{ matrix.os }}-${{ matrix.python-version }}
           path: ./ci-artifact-data/*
+      - name: Nature Unit Tests without matplotlib/pyscf/psi4/pyquante2/sparse under Python ${{ matrix.python-version }}
+        env:
+          PYTHONWARNINGS: default
+        run: |
+          source "$CONDA/etc/profile.d/conda.sh"
+          conda activate psi4env
+          pip uninstall -y matplotlib pyscf sparse
+          if [[ "${{ matrix.os }}" != "windows-2019" || ("${{ matrix.os }}" == "windows-2019" && "${{ matrix.python-version }}" != "3.10") ]]; then
+              echo 'Uninstall psi4'
+              conda remove -y --force psi4
+          fi
+          echo 'Uninstall pyquante2'
+          conda remove -y --force pyquante2_pure
+          pip uninstall -y pyquante2
+          if [ "${{ github.event_name }}" == "schedule" ] || [ "${{ contains(github.event.pull_request.labels.*.name, 'run_slow') }}" == "true" ]; then
+              export QISKIT_TESTS="run_slow"
+          fi
+          mkdir -p ./.stestr1
+          stestr --test-path test --repo-url .stestr1 run
+        if: ${{ !cancelled() }}
+        shell: bash
   Tutorials:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest]
-        python-version: [3.7, 3.8]
+        python-version: [3.8, 3.9]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v2
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Create conda environment
-        run: |
-          source "$CONDA/etc/profile.d/conda.sh"
-          conda create -n psi4env python=${{ matrix.python-version }}
-        shell: bash
+          cache: 'pip'
+          cache-dependency-path: |
+            setup.py
+            requirements.txt
+            requirements-dev.txt
       - uses: ./.github/actions/install-main-dependencies
         with:
           os: ${{ matrix.os }}
+          python-version: ${{ matrix.python-version }}
+          use-conda: "false"
         if: ${{ !startsWith(github.ref, 'refs/heads/stable') && !startsWith(github.base_ref, 'stable/') }}
       - uses: ./.github/actions/install-nature
+        with:
+          use-conda: "false"
       - name: Install Dependencies
         run: |
-          source "$CONDA/etc/profile.d/conda.sh"
-          conda activate psi4env
-          pip install jupyter sphinx_rtd_theme qiskit-terra[visualization]
+          pip install jupyter qiskit-terra[visualization]
           sudo apt-get install -y pandoc graphviz
           echo "earliest_version: 0.1.0" >> releasenotes/config.yaml
         shell: bash
@@ -263,15 +315,13 @@ jobs:
           QISKIT_PARALLEL: False
           QISKIT_DOCS_BUILD_TUTORIALS: 'always'
         run: |
-          source "$CONDA/etc/profile.d/conda.sh"
-          conda activate psi4env
-          make html SPHINXOPTS=-W
+          make html
           cd docs/_build/html
           mkdir artifacts
           tar -zcvf artifacts/tutorials.tar.gz --exclude=./artifacts .
         shell: bash
       - name: Run upload tutorials
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: tutorials${{ matrix.python-version }}
           path: docs/_build/html/artifacts/tutorials.tar.gz
@@ -280,8 +330,6 @@ jobs:
           QISKIT_PARALLEL: False
           QISKIT_DOCS_BUILD_TUTORIALS: 'always'
         run: |
-          source "$CONDA/etc/profile.d/conda.sh"
-          conda activate psi4env
           # clean last sphinx output
           make clean_sphinx
           # get current version
@@ -290,20 +338,19 @@ jobs:
           wget https://codeload.github.com/Qiskit/qiskit-nature/zip/stable/$version -O /tmp/repo.zip
           unzip /tmp/repo.zip -d /tmp/
           # copy stable tutorials to main tutorials
-          rm -rf docs/tutorials/*
           cp -R /tmp/qiskit-nature-stable-$version/docs/tutorials/* docs/tutorials
           # run tutorials and zip results
           echo "earliest_version: 0.1.0" >> releasenotes/config.yaml
           # ignore unreleased/untagged notes
           tools/ignore_untagged_notes.sh
-          make html SPHINXOPTS=-W
+          make html
           cd docs/_build/html
           mkdir artifacts
           tar -zcvf artifacts/tutorials.tar.gz --exclude=./artifacts .
         if: ${{ matrix.python-version == 3.8 && !startsWith(github.ref, 'refs/heads/stable') && !startsWith(github.base_ref, 'stable/') }}
         shell: bash
       - name: Run upload stable tutorials
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: tutorials-stable${{ matrix.python-version }}
           path: docs/_build/html/artifacts/tutorials.tar.gz
@@ -315,39 +362,39 @@ jobs:
       matrix:
         python-version: [3.7]
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ubuntu-latest-3.7
           path: /tmp/u37
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ubuntu-latest-3.8
           path: /tmp/u38
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ubuntu-latest-3.9
           path: /tmp/u39
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: ubuntu-latest-3.10
           path: /tmp/u310
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: macos-latest-3.8
           path: /tmp/m38
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: macos-latest-3.10
           path: /tmp/m310
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: windows-2019-3.8
           path: /tmp/w38
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: windows-2019-3.10
           path: /tmp/w310

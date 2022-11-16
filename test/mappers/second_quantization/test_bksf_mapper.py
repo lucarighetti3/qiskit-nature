@@ -13,7 +13,7 @@
 """ Test Bravyi-Kitaev Super-Fast Mapper """
 
 import unittest
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 from test.mappers.second_quantization.resources.bksf_lih import (
     FERMIONIC_HAMILTONIAN,
@@ -37,7 +37,7 @@ def _sort_simplify(sparse_pauli):
     return sparse_pauli
 
 
-class TestBravyiKitaevSuperFastMapper(QiskitNatureTestCase):
+class TestBravyiKitaevSuperFastMapper(QiskitNatureDeprecatedTestCase):
     """Test Bravyi-Kitaev Super-Fast Mapper"""
 
     def test_bksf_edge_op_bi(self):
@@ -160,7 +160,7 @@ class TestBravyiKitaevSuperFastMapper(QiskitNatureTestCase):
             self.assertEqual(op1, op2)
 
         with self.subTest("Sparse FermionicOp input"):
-            h2_fop_sparse = h2_fop.to_normal_order()
+            h2_fop_sparse = h2_fop.normal_ordered()
             pauli_sum_op_from_sparse = BravyiKitaevSuperFastMapper().map(h2_fop_sparse)
             op2_from_sparse = _sort_simplify(pauli_sum_op_from_sparse.primitive)
             self.assertEqual(op1, op2_from_sparse)

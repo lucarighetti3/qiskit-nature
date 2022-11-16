@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2020, 2021.
+# (C) Copyright IBM 2020, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -14,7 +14,7 @@
 
 import unittest
 from functools import partial
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 import numpy as np
 
 from qiskit_nature.algorithms.pes_samplers.potentials.harmonic_potential import (
@@ -27,7 +27,7 @@ from qiskit_nature.constants import HARTREE_TO_J_PER_MOL
 from qiskit_nature.drivers import Molecule
 
 
-class TestPotential(QiskitNatureTestCase):
+class TestPotential(QiskitNatureDeprecatedTestCase):
     """Test Potential"""
 
     @staticmethod

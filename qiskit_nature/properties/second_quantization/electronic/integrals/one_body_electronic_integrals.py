@@ -22,6 +22,7 @@ from qiskit_nature import QiskitNatureError
 
 from .electronic_integrals import ElectronicIntegrals
 from ..bases import ElectronicBasis, ElectronicBasisTransform
+from .....deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 
 
 class OneBodyElectronicIntegrals(ElectronicIntegrals):
@@ -52,6 +53,14 @@ class OneBodyElectronicIntegrals(ElectronicIntegrals):
         """
         num_body_terms = 1
         super().__init__(num_body_terms, basis, matrices, threshold)
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name="qiskit_nature.properties.second_quantization.electronic.integrals.OneBodyElectronicIntegrals",
+            new_type=DeprecatedType.CLASS,
+            new_name="qiskit_nature.second_q.operators.PolynomialTensor",
+            category=NatureDeprecationWarning,
+        )
 
     def transform_basis(self, transform: ElectronicBasisTransform) -> OneBodyElectronicIntegrals:
         # pylint: disable=line-too-long
@@ -108,8 +117,9 @@ class OneBodyElectronicIntegrals(ElectronicIntegrals):
 
         return np.where(np.abs(so_matrix) > self._threshold, so_matrix, 0.0)
 
-    def _calc_coeffs_with_ops(self, indices: tuple[int, ...]) -> list[tuple[int, str]]:
-        return [(indices[0], "+"), (indices[1], "-")]
+    @staticmethod
+    def _calc_coeffs_with_ops(indices: tuple[int, ...]) -> list[tuple[str, int]]:
+        return [("+", indices[0]), ("-", indices[1])]
 
     def compose(self, other: ElectronicIntegrals, einsum_subscript: str = "ij,ji") -> complex:
         """Composes these ``OneBodyElectronicIntegrals`` with another instance thereof.

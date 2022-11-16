@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -10,12 +10,12 @@
 # copyright notice, and modified files need to carry a notice indicating
 # that they have been altered from the originals.
 """Tests QubitFixing."""
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 from qiskit.opflow import I, Z, PauliSumOp
 from qiskit_nature.problems.sampling.protein_folding.qubit_utils.qubit_fixing import _fix_qubits
 
 
-class TestQubitFixing(QiskitNatureTestCase):
+class TestQubitFixing(QiskitNatureDeprecatedTestCase):
     """Tests QubitFixing."""
 
     def test_fix_qubits_small(self):

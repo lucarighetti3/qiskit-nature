@@ -20,7 +20,7 @@ import sys
 
 import h5py
 
-from qiskit_nature.deprecation import warn_deprecated, DeprecatedType
+from qiskit_nature.deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 from qiskit_nature.results import EigenstateResult
 
 if sys.version_info >= (3, 8):
@@ -53,6 +53,14 @@ class Property(ABC):
             name: the name of the property.
         """
         self._name = name
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name="qiskit_nature.properties.Property",
+            new_type=DeprecatedType.CLASS,
+            new_name="qiskit_nature.second_q.properties.Property",
+            category=NatureDeprecationWarning,
+        )
 
     @property
     def name(self) -> str:
@@ -72,7 +80,7 @@ class Property(ABC):
         logger = logging.getLogger(self.__module__ + "." + self.__class__.__name__)
         if not logger.isEnabledFor(logging.INFO):
             return
-        logger.info(self.__str__())
+        logger.info(str(self))
 
     def to_hdf5(self, parent: h5py.Group) -> None:
         """Stores this instance in an HDF5 group inside of the provided parent group.

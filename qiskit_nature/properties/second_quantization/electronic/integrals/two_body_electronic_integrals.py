@@ -19,10 +19,12 @@ from typing import Optional, Union, cast
 import numpy as np
 
 from qiskit_nature import QiskitNatureError
+from qiskit_nature.settings import settings
 
 from .electronic_integrals import ElectronicIntegrals
 from .one_body_electronic_integrals import OneBodyElectronicIntegrals
 from ..bases import ElectronicBasis, ElectronicBasisTransform
+from .....deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 
 
 class TwoBodyElectronicIntegrals(ElectronicIntegrals):
@@ -62,6 +64,14 @@ class TwoBodyElectronicIntegrals(ElectronicIntegrals):
         """
         num_body_terms = 2
         super().__init__(num_body_terms, basis, matrices, threshold)
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name="qiskit_nature.properties.second_quantization.electronic.integrals.TwoBodyElectronicIntegrals",
+            new_type=DeprecatedType.CLASS,
+            new_name="qiskit_nature.second_q.operators.PolynomialTensor",
+            category=NatureDeprecationWarning,
+        )
 
     def get_matrix(self, index: int = 0) -> np.ndarray:
         # pylint: disable=line-too-long
@@ -146,7 +156,9 @@ class TwoBodyElectronicIntegrals(ElectronicIntegrals):
                     matrices.append(None)
                     continue
                 mat = self.get_matrix(idx)
-            matrices.append(np.einsum(self.EINSUM_AO_TO_MO, mat, *coeffs))
+            matrices.append(
+                np.einsum(self.EINSUM_AO_TO_MO, mat, *coeffs, optimize=settings.optimize_einsum)
+            )
 
         return TwoBodyElectronicIntegrals(transform.final_basis, tuple(matrices))
 
@@ -178,8 +190,9 @@ class TwoBodyElectronicIntegrals(ElectronicIntegrals):
 
         return np.where(np.abs(so_matrix) > self._threshold, so_matrix, 0.0)
 
-    def _calc_coeffs_with_ops(self, indices: tuple[int, ...]) -> list[tuple[int, str]]:
-        return [(indices[0], "+"), (indices[2], "+"), (indices[3], "-"), (indices[1], "-")]
+    @staticmethod
+    def _calc_coeffs_with_ops(indices: tuple[int, ...]) -> list[tuple[str, int]]:
+        return [("+", indices[0]), ("+", indices[2]), ("-", indices[3]), ("-", indices[1])]
 
     def compose(
         self, other: ElectronicIntegrals, einsum_subscript: Optional[str] = None

@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -124,6 +124,20 @@ from .peptide.chains.main_chain import MainChain
 from .peptide.chains.side_chain import SideChain
 from .peptide.peptide import Peptide
 from .protein_folding_problem import ProteinFoldingProblem
+from ....deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
+
+warn_deprecated(
+    "0.5.0",
+    old_type=DeprecatedType.PACKAGE,
+    old_name="qiskit_nature.problems.sampling.protein_folding",
+    additional_msg=(
+        ". Please refer to repository "
+        "'https://github.com/qiskit-research/qiskit-research'"
+        " for additional information"
+    ),
+    stack_level=3,
+    category=NatureDeprecationWarning,
+)
 
 __all__ = [
     "ProteinFoldingProblem",

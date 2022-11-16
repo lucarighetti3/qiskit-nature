@@ -83,9 +83,17 @@ HAS_GAUSSIAN = NatureLazySubprocessTester(
 )
 
 PSI4 = "psi4"
-PSI4_DESC = "PSI4"
+PSI4_DESC = "Psi4"
 HAS_PSI4 = NatureLazySubprocessTester(
     (PSI4, "--version"),
     name=PSI4_DESC,
     msg="See https://psicode.org",
+)
+
+HAS_SPARSE = LazyImportTester(
+    {
+        "sparse": ("SparseArray", "COO", "DOK"),
+    },
+    name="sparse",
+    install="pip install 'qiskit-nature[sparse]'",
 )

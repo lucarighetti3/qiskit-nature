@@ -22,12 +22,13 @@ import h5py
 from qiskit_nature.hdf5 import _import_and_build_from_hdf5
 from qiskit_nature.results import EigenstateResult
 from .property import Interpretable, Property
+from ..deprecation import warn_deprecated, DeprecatedType, NatureDeprecationWarning
 
 # pylint: disable=invalid-name
-T = TypeVar("T", bound=Property, covariant=True)
+T_co = TypeVar("T_co", bound=Property, covariant=True)
 
 
-class GroupedProperty(Property, Iterable, Generic[T]):
+class GroupedProperty(Property, Iterable, Generic[T_co]):
     """A group of multiple properties.
 
     This class implements the Composite Pattern [1]. As such, it acts as both, a container of
@@ -48,7 +49,18 @@ class GroupedProperty(Property, Iterable, Generic[T]):
             name: the name of the property group.
         """
         super().__init__(name)
-        self._properties: dict[str, T] = {}
+        self._properties: dict[str, T_co] = {}
+        warn_deprecated(
+            "0.5.0",
+            old_type=DeprecatedType.CLASS,
+            old_name="qiskit_nature.properties.GroupedProperty",
+            additional_msg=(
+                ". Please refer to "
+                "'https://github.com/Qiskit/qiskit-nature/issues/705'"
+                " for additional information."
+            ),
+            category=NatureDeprecationWarning,
+        )
 
     def __str__(self) -> str:
         string = [super().__str__() + ":"]
@@ -57,7 +69,7 @@ class GroupedProperty(Property, Iterable, Generic[T]):
                 string += [f"\t{line}"]
         return "\n".join(string)
 
-    def add_property(self, prop: Optional[T]) -> None:
+    def add_property(self, prop: Optional[T_co]) -> None:
         """Adds a property to the group.
 
         Args:
@@ -70,7 +82,7 @@ class GroupedProperty(Property, Iterable, Generic[T]):
                 name = prop.__class__.__name__
             self._properties[name] = prop
 
-    def get_property(self, prop: Union[str, Type[Property]]) -> Optional[T]:
+    def get_property(self, prop: Union[str, Type[Property]]) -> Optional[T_co]:
         """Gets a property from the group.
 
         Args:
@@ -86,11 +98,11 @@ class GroupedProperty(Property, Iterable, Generic[T]):
             name = prop.__name__
         return self._properties.get(name, None)
 
-    def __iter__(self) -> Generator[T, T, None]:
+    def __iter__(self) -> Generator[T_co, T_co, None]:
         """Returns the generator-iterator method."""
         return self._generator()
 
-    def _generator(self) -> Generator[T, T, None]:
+    def _generator(self) -> Generator[T_co, T_co, None]:
         """A generator-iterator method [1] iterating over all internal properties.
 
         [1]: https://docs.python.org/3/reference/expressions.html#generator-iterator-methods

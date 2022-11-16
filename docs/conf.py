@@ -25,7 +25,9 @@
 #
 import os
 import sys
+from datetime import date
 
+sys.path.insert(0, os.path.abspath(".."))
 sys.path.append(os.path.abspath("."))
 
 """
@@ -48,7 +50,7 @@ os.environ["QISKIT_DOCS"] = "TRUE"
 
 # -- Project information -----------------------------------------------------
 project = "Qiskit Nature"
-copyright = "2018, 2021, Qiskit Nature Development Team"  # pylint: disable=redefined-builtin
+copyright = f"2018, {date.today().year}, Qiskit Nature Development Team"  # pylint: disable=redefined-builtin
 author = "Qiskit Nature Development Team"
 
 # The short X.Y version
@@ -69,13 +71,13 @@ rst_prolog = """
 nbsphinx_prolog = """
 {% set docname = env.doc2path(env.docname, base=None) %}
 .. only:: html
-    
+
     .. role:: raw-html(raw)
         :format: html
-    
+
     .. note::
         This page was generated from `docs/{{ docname }}`__.
-        
+
         __"""
 
 vers = version.split(".")
@@ -98,12 +100,13 @@ extensions = [
     "sphinx.ext.mathjax",
     "sphinx.ext.viewcode",
     "sphinx.ext.extlinks",
-    "sphinx_panels",
+    "sphinx_design",
     "jupyter_sphinx",
     "sphinx_autodoc_typehints",
     "reno.sphinxext",
     "sphinx.ext.doctest",
     "nbsphinx",
+    "sphinx.ext.intersphinx",
 ]
 html_static_path = ["_static"]
 templates_path = ["_templates"]
@@ -148,7 +151,7 @@ numfig_format = {"table": "Table %s"}
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = "en"
 
 # For Adding Locale
 locale_dirs = ["locale/"]  # path is example but recommended.
@@ -204,6 +207,14 @@ html_theme_options = {
     "titles_only": False,
 }
 
+intersphinx_mapping = {
+    "python": ("https://docs.python.org/3", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
+    "scipy": ("https://docs.scipy.org/doc/scipy/", None),
+    "qiskit": ("https://qiskit.org/documentation/", None),
+    "rustworkx": ("https://qiskit.org/documentation/rustworkx/", None),
+    "sparse": ("https://sparse.pydata.org/en/stable/", None),
+}
 # -- Extension configuration -------------------------------------------------
 
 

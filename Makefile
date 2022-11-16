@@ -42,6 +42,7 @@ all_check: spell style lint copyright mypy clean_sphinx html doctest
 lint:
 	python -m pylint -rn --ignore=gauopen qiskit_nature test tools
 	python tools/verify_headers.py qiskit_nature test tools
+	python tools/find_stray_release_notes.py
 
 mypy:
 	python -m mypy qiskit_nature test tools
@@ -61,16 +62,16 @@ test_ci:
 
 spell:
 	python -m pylint -rn --disable=all --enable=spelling --spelling-dict=en_US --spelling-private-dict-file=.pylintdict --ignore=gauopen qiskit_nature test tools
-	sphinx-build -M spelling docs docs/_build -W $(SPHINXOPTS)
+	sphinx-build -M spelling docs docs/_build -W -T --keep-going $(SPHINXOPTS)
 
 copyright:
 	python tools/check_copyright.py
 
 html:
-	sphinx-build -M html docs docs/_build $(SPHINXOPTS)
+	sphinx-build -M html docs docs/_build -W -T --keep-going $(SPHINXOPTS)
 
 doctest:
-	sphinx-build -M doctest docs docs/_build $(SPHINXOPTS)
+	sphinx-build -M doctest docs docs/_build -W -T --keep-going $(SPHINXOPTS)
 
 clean_sphinx:
 	make -C docs clean
@@ -82,5 +83,5 @@ coverage:
 coverage_erase:
 	python -m coverage erase
 
-clean: clean_sphinx coverage_erase; 
+clean: clean_sphinx coverage_erase;
 

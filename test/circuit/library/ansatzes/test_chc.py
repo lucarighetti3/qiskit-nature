@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2019, 2021.
+# (C) Copyright IBM 2019, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -14,7 +14,8 @@
 
 import unittest
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
+from test.circuit.library.ansatzes.utils.vibrational_op_label_creator import _create_labels
 
 from qiskit import BasicAer
 from qiskit.utils import QuantumInstance, algorithm_globals
@@ -28,10 +29,8 @@ from qiskit_nature.mappers.second_quantization import DirectMapper
 from qiskit_nature.converters.second_quantization import QubitConverter
 from qiskit_nature.operators.second_quantization import VibrationalOp
 
-from .utils.vibrational_op_label_creator import _create_labels
 
-
-class TestCHCVSCF(QiskitNatureTestCase):
+class TestCHCVSCF(QiskitNatureDeprecatedTestCase):
     """Test for CHC and VSCF library circuits."""
 
     def setUp(self):

@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2018, 2021.
+# (C) Copyright IBM 2018, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -13,7 +13,7 @@
 """Test the VSCF initial state."""
 
 import unittest
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 import numpy as np
 
 from qiskit import QuantumCircuit
@@ -21,7 +21,7 @@ from qiskit_nature.circuit.library import VSCF
 from qiskit_nature.circuit.library.initial_states.vscf import vscf_bitstring
 
 
-class TestVSCF(QiskitNatureTestCase):
+class TestVSCF(QiskitNatureDeprecatedTestCase):
     """Initial State vscf tests"""
 
     def test_bitstring(self):

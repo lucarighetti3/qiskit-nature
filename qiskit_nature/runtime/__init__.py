@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -23,14 +23,11 @@ algorithms and scripts in the cloud.
    :toctree: ../stubs/
    :nosignatures:
 
-   VQEProgram
-   VQEProgramResult
    VQEClient
    VQERuntimeResult
 
 """
 
-from .vqe_program import VQEProgram, VQEProgramResult
 from .vqe_client import VQEClient, VQERuntimeResult
 
-__all__ = ["VQEProgram", "VQEProgramResult", "VQEClient", "VQERuntimeResult"]
+__all__ = ["VQEClient", "VQERuntimeResult"]

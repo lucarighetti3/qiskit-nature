@@ -15,17 +15,24 @@ import contextlib
 import copy
 import io
 import unittest
+import warnings
 
 from typing import cast
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 import numpy as np
+
+from ddt import ddt, data
 
 from qiskit.providers.basicaer import BasicAer
 from qiskit.utils import QuantumInstance
 from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import L_BFGS_B
+from qiskit.opflow.gradients import Gradient, NaturalGradient
+from qiskit.test import slow_test
+
+from qiskit_nature import QiskitNatureError
 from qiskit_nature.algorithms import AdaptVQE, VQEUCCFactory
 from qiskit_nature.circuit.library import HartreeFock, UCC
 from qiskit_nature.drivers import UnitsType
@@ -37,6 +44,7 @@ from qiskit_nature.properties.second_quantization.electronic import (
     ElectronicEnergy,
     ParticleNumber,
 )
+from qiskit_nature.transformers.second_quantization.electronic import ActiveSpaceTransformer
 from qiskit_nature.properties.second_quantization.electronic.bases import ElectronicBasis
 from qiskit_nature.properties.second_quantization.electronic.integrals import (
     OneBodyElectronicIntegrals,
@@ -45,7 +53,8 @@ from qiskit_nature.properties.second_quantization.electronic.integrals import (
 import qiskit_nature.optionals as _optionals
 
 
-class TestAdaptVQE(QiskitNatureTestCase):
+@ddt
+class TestAdaptVQE(QiskitNatureDeprecatedTestCase):
     """Test Adaptive VQE Ground State Calculation"""
 
     @unittest.skipIf(not _optionals.HAS_PYSCF, "pyscf not available.")
@@ -64,14 +73,81 @@ class TestAdaptVQE(QiskitNatureTestCase):
 
     def test_default(self):
         """Default execution"""
-        solver = VQEUCCFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = AdaptVQE(self.qubit_converter, solver)
         res = calc.solve(self.problem)
         self.assertAlmostEqual(res.electronic_energies[0], self.expected, places=6)
 
+    @data("param_shift", "fin_diff", "lin_comb")
+    def test_gradient(self, grad_method):
+        """test for different gradient methods"""
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        grad = Gradient(grad_method, epsilon=1.0)
+        calc = AdaptVQE(self.qubit_converter, solver, gradient=grad)
+        res = calc.solve(self.problem)
+        self.assertAlmostEqual(res.electronic_energies[0], self.expected, places=6)
+
+    def test_natural_gradients_invalid(self):
+        """test that an exception is thrown when an invalid gradient method is used"""
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        grad = NaturalGradient(
+            grad_method="fin_diff", qfi_method="lin_comb_full", regularization="ridge"
+        )
+        calc = AdaptVQE(self.qubit_converter, solver, gradient=grad)
+        with self.assertRaises(QiskitNatureError):
+            _ = calc.solve(self.problem)
+
+    def test_delta(self):
+        """test for when delta is set instead of gradient"""
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        delta1 = 0.01
+        with warnings.catch_warnings(record=True):
+            warnings.simplefilter("always")
+            calc = AdaptVQE(self.qubit_converter, solver, delta=delta1)
+        res = calc.solve(self.problem)
+        self.assertAlmostEqual(res.electronic_energies[0], self.expected, places=6)
+
+    def test_delta_and_gradient(self):
+        """test for when delta and gradient both are set"""
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        delta1 = 0.01
+        grad = Gradient(grad_method="fin_diff", epsilon=1.0)
+        with self.assertRaises(TypeError):
+            _ = AdaptVQE(self.qubit_converter, solver, delta=delta1, gradient=grad)
+
+    @slow_test
+    def test_LiH(self):
+        """Lih test"""
+        driver = PySCFDriver(
+            atom="Li .0 .0 .0; H .0 .0 1.6",
+            unit=UnitsType.ANGSTROM,
+            basis="sto3g",
+        )
+        transformer = ActiveSpaceTransformer(num_electrons=2, num_molecular_orbitals=3)
+        problem = ElectronicStructureProblem(driver, [transformer])
+
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        calc = AdaptVQE(self.qubit_converter, solver)
+        res = calc.solve(problem)
+        self.assertAlmostEqual(res.electronic_energies[0], -8.855126478, places=6)
+
     def test_print_result(self):
         """Regression test against issues with printing results."""
-        solver = VQEUCCFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = AdaptVQE(self.qubit_converter, solver)
         res = calc.solve(self.problem)
         with contextlib.redirect_stdout(io.StringIO()) as out:
@@ -105,7 +181,9 @@ class TestAdaptVQE(QiskitNatureTestCase):
     def test_aux_ops_reusability(self):
         """Test that the auxiliary operators can be reused"""
         # Regression test against #1475
-        solver = VQEUCCFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = AdaptVQE(self.qubit_converter, solver)
 
         modes = 4
@@ -132,7 +210,7 @@ class TestAdaptVQE(QiskitNatureTestCase):
         """Test custom MES"""
 
         class CustomFactory(VQEUCCFactory):
-            """A custom MESFactory"""
+            """A custom MES Factory"""
 
             def get_solver(self, problem, qubit_converter):
                 particle_number = cast(
@@ -152,12 +230,14 @@ class TestAdaptVQE(QiskitNatureTestCase):
                 )
                 vqe = VQE(
                     ansatz=ansatz,
-                    quantum_instance=self.quantum_instance,
+                    quantum_instance=self.minimum_eigensolver.quantum_instance,
                     optimizer=L_BFGS_B(),
                 )
                 return vqe
 
-        solver = CustomFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = CustomFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
 
         calc = AdaptVQE(self.qubit_converter, solver)
         res = calc.solve(self.problem)
@@ -178,7 +258,9 @@ class TestAdaptVQE(QiskitNatureTestCase):
                 solver.ansatz.operators = custom_excitation_pool
                 return solver
 
-        solver = CustomFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = CustomFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = AdaptVQE(self.qubit_converter, solver)
         res = calc.solve(self.problem)
         self.assertAlmostEqual(res.electronic_energies[0], self.expected, places=6)

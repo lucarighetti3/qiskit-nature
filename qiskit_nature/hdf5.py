@@ -23,6 +23,7 @@ from typing import Generator
 import h5py
 
 from qiskit_nature.exceptions import QiskitNatureError
+from qiskit_nature.deprecation import deprecate_function
 
 if sys.version_info >= (3, 8):
     # pylint: disable=no-name-in-module
@@ -54,7 +55,6 @@ class HDF5Storable(Protocol):
         Args:
             parent: the parent HDF5 group.
         """
-        ...
 
     @staticmethod
     def from_hdf5(h5py_group: h5py.Group) -> HDF5Storable:
@@ -77,9 +77,9 @@ class HDF5Storable(Protocol):
         Returns:
             A new instance of this class.
         """
-        ...
 
 
+@deprecate_function("0.5.0")
 def save_to_hdf5(obj: HDF5Storable, filename: str, *, replace: bool = False) -> None:
     """A utility method to store an object in an HDF5 file.
 
@@ -122,6 +122,7 @@ def save_to_hdf5(obj: HDF5Storable, filename: str, *, replace: bool = False) -> 
         obj.to_hdf5(file)
 
 
+@deprecate_function("0.5.0")
 def load_from_hdf5(filename: str, *, skip_unreadable_data: bool = False) -> HDF5Storable:
     """Loads a single Qiskit Nature object from an HDF5 file.
 

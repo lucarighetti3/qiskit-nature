@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -14,7 +14,7 @@
 
 import unittest
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 from ddt import ddt, data, unpack
 
@@ -24,7 +24,7 @@ from qiskit_nature.mappers.second_quantization import LinearMapper
 
 
 @ddt
-class TestLinearMapper(QiskitNatureTestCase):
+class TestLinearMapper(QiskitNatureDeprecatedTestCase):
     """Test Linear Mapper"""
 
     spin_op1 = SpinOp([("Y_0^2", -0.432 + 1.32j)], 0.5, 1)

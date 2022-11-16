@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -12,7 +12,7 @@
 
 """Test the excitation generator."""
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 from ddt import data, ddt, unpack
 
@@ -22,7 +22,7 @@ from qiskit_nature.circuit.library.ansatzes.utils.vibration_excitation_generator
 
 
 @ddt
-class TestVibrationExcitationGenerator(QiskitNatureTestCase):
+class TestVibrationExcitationGenerator(QiskitNatureDeprecatedTestCase):
     """Tests for the default vibration excitation generator method."""
 
     @unpack

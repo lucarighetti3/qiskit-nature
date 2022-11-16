@@ -18,11 +18,10 @@ import io
 import unittest
 import warnings
 
-from test import QiskitNatureTestCase
+from test import QiskitNatureDeprecatedTestCase
 
 import numpy as np
 
-import qiskit
 from qiskit import BasicAer
 from qiskit.algorithms import VQE
 from qiskit.algorithms.optimizers import SLSQP, SPSA
@@ -48,9 +47,10 @@ from qiskit_nature.properties.second_quantization.electronic.integrals import (
 )
 from qiskit_nature.transformers.second_quantization.electronic import FreezeCoreTransformer
 from qiskit_nature import settings
+from qiskit_nature.algorithms.initial_points import MP2InitialPoint
 
 
-class TestGroundStateEigensolver(QiskitNatureTestCase):
+class TestGroundStateEigensolver(QiskitNatureDeprecatedTestCase):
     """Test GroundStateEigensolver"""
 
     def setUp(self):
@@ -63,6 +63,7 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
         algorithm_globals.random_seed = self.seed
 
         self.reference_energy = -1.1373060356951838
+        self.mp2_initial_point = [0.0, 0.0, -0.07197145]
 
         self.qubit_converter = QubitConverter(JordanWignerMapper())
         self.electronic_structure_problem = ElectronicStructureProblem(self.driver)
@@ -115,7 +116,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
 
     def test_vqe_ucc_custom(self):
         """Test custom ansatz in Factory use case"""
-        solver = VQEUCCFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = GroundStateEigensolver(self.qubit_converter, solver)
         res = calc.solve(self.electronic_structure_problem)
         self.assertAlmostEqual(res.total_energies[0], self.reference_energy, places=6)
@@ -142,6 +145,7 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
         aux_ops_copy = copy.deepcopy(aux_ops)
 
         _ = calc.solve(self.electronic_structure_problem)
+
         assert all(
             frozenset(a.to_list()) == frozenset(b.to_list()) for a, b in zip(aux_ops, aux_ops_copy)
         )
@@ -183,7 +187,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
 
     def _setup_evaluation_operators(self):
         # first we run a ground state calculation
-        solver = VQEUCCFactory(QuantumInstance(BasicAer.get_backend("statevector_simulator")))
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
         calc = GroundStateEigensolver(self.qubit_converter, solver)
         res = calc.solve(self.electronic_structure_problem)
 
@@ -323,7 +329,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
     def test_eval_op_qasm_aer(self):
         """Regression tests against https://github.com/Qiskit/qiskit-nature/issues/53."""
 
-        backend = qiskit.Aer.get_backend("aer_simulator")
+        from qiskit_aer import Aer
+
+        backend = Aer.get_backend("aer_simulator")
 
         solver = VQEUCCFactory(
             optimizer=SLSQP(maxiter=100),
@@ -408,7 +416,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
     def test_uccsd_hf_aer_statevector(self):
         """uccsd hf test with Aer statevector"""
 
-        backend = qiskit.Aer.get_backend("aer_simulator_statevector")
+        from qiskit_aer import Aer
+
+        backend = Aer.get_backend("aer_simulator_statevector")
 
         ansatz = self._prepare_uccsd_hf(self.qubit_converter)
 
@@ -429,7 +439,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
     def test_uccsd_hf_aer_qasm(self):
         """uccsd hf test with Aer qasm simulator."""
 
-        backend = qiskit.Aer.get_backend("aer_simulator")
+        from qiskit_aer import Aer
+
+        backend = Aer.get_backend("aer_simulator")
 
         ansatz = self._prepare_uccsd_hf(self.qubit_converter)
 
@@ -455,7 +467,9 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
     def test_uccsd_hf_aer_qasm_snapshot(self):
         """uccsd hf test with Aer qasm simulator snapshot."""
 
-        backend = qiskit.Aer.get_backend("aer_simulator")
+        from qiskit_aer import Aer
+
+        backend = Aer.get_backend("aer_simulator")
 
         ansatz = self._prepare_uccsd_hf(self.qubit_converter)
 
@@ -538,6 +552,96 @@ class TestGroundStateEigensolver(QiskitNatureTestCase):
         """
         for truth, expected in zip(out.getvalue().split("\n"), expected.split("\n")):
             assert truth.strip().startswith(expected.strip())
+
+    def test_default_initial_point(self):
+        """Test when using the default initial point."""
+
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator"))
+        )
+        calc = GroundStateEigensolver(self.qubit_converter, solver)
+        res = calc.solve(self.electronic_structure_problem)
+
+        np.testing.assert_array_equal(solver.initial_point.to_numpy_array(), [0.0, 0.0, 0.0])
+        self.assertAlmostEqual(res.total_energies[0], self.reference_energy, places=6)
+
+    def test_vqe_ucc_factory_with_user_initial_point(self):
+        """Test VQEUCCFactory when using it with a user defined initial point."""
+
+        initial_point = np.asarray([1.28074029e-19, 5.92226076e-08, 1.11762559e-01])
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator")),
+            initial_point=initial_point,
+            optimizer=SLSQP(maxiter=1),
+        )
+        calc = GroundStateEigensolver(self.qubit_converter, solver)
+        res = calc.solve(self.electronic_structure_problem)
+        np.testing.assert_array_almost_equal(res.raw_result.optimal_point, initial_point)
+
+    def test_vqe_ucc_factory_with_mp2(self):
+        """Test when using MP2InitialPoint to generate the initial point."""
+
+        informed_start = MP2InitialPoint()
+
+        solver = VQEUCCFactory(
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator")),
+            initial_point=informed_start,
+        )
+        calc = GroundStateEigensolver(self.qubit_converter, solver)
+        res = calc.solve(self.electronic_structure_problem)
+
+        np.testing.assert_array_almost_equal(
+            solver.initial_point.to_numpy_array(), self.mp2_initial_point
+        )
+        self.assertAlmostEqual(res.total_energies[0], self.reference_energy, places=6)
+
+    def test_vqe_ucc_factory_with_reps(self):
+        """Test when using the default initial point with repeated evolved operators."""
+        ansatz = UCCSD(
+            qubit_converter=self.qubit_converter,
+            num_particles=self.num_particles,
+            num_spin_orbitals=self.num_spin_orbitals,
+            reps=2,
+        )
+
+        solver = VQEUCCFactory(
+            ansatz=ansatz,
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator")),
+        )
+        calc = GroundStateEigensolver(self.qubit_converter, solver)
+        res = calc.solve(self.electronic_structure_problem)
+
+        np.testing.assert_array_almost_equal(
+            solver.initial_point.to_numpy_array(), np.zeros(6, dtype=float)
+        )
+        self.assertAlmostEqual(res.total_energies[0], self.reference_energy, places=6)
+
+    def test_vqe_ucc_factory_with_mp2_with_reps(self):
+        """Test when using MP2InitialPoint to generate the initial point with repeated evolved
+        operators.
+        """
+
+        initial_point = MP2InitialPoint()
+
+        ansatz = UCCSD(
+            qubit_converter=self.qubit_converter,
+            num_particles=self.num_particles,
+            num_spin_orbitals=self.num_spin_orbitals,
+            reps=2,
+        )
+
+        solver = VQEUCCFactory(
+            ansatz=ansatz,
+            quantum_instance=QuantumInstance(BasicAer.get_backend("statevector_simulator")),
+            initial_point=initial_point,
+        )
+        calc = GroundStateEigensolver(self.qubit_converter, solver)
+        res = calc.solve(self.electronic_structure_problem)
+
+        np.testing.assert_array_almost_equal(
+            solver.initial_point.to_numpy_array(), np.tile(self.mp2_initial_point, 2)
+        )
+        self.assertAlmostEqual(res.total_energies[0], self.reference_energy, places=6)
 
 
 if __name__ == "__main__":

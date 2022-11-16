@@ -1,6 +1,6 @@
 # This code is part of Qiskit.
 #
-# (C) Copyright IBM 2021.
+# (C) Copyright IBM 2021, 2022.
 #
 # This code is licensed under the Apache License, Version 2.0. You may
 # obtain a copy of this license in the LICENSE.txt file in the root directory
@@ -32,6 +32,7 @@ from qiskit_nature.deprecation import (
     deprecate_method,
     deprecate_arguments,
     deprecate_values,
+    deprecate_positional_arguments,
 )
 
 # pylint: disable=bad-docstring-quotes
@@ -117,6 +118,22 @@ class DeprecatedClass4:
         self.status = status
 
 
+@deprecate_positional_arguments(
+    version="0.1",
+    func_name="function_positional",
+    old_function_arguments=["a", "b", "c", "d"],
+    stack_level=2,
+)
+def function_positional(
+    a,
+    c,
+    **kwargs,
+) -> int:
+    """Deprecated function positional"""
+
+    return a + c + sum(kwargs.values())
+
+
 class TestClass:
     """Test class with deprecation"""
 
@@ -126,13 +143,13 @@ class TestClass:
     # Bug in mypy, if property decorator is used with another one
     # https://github.com/python/mypy/issues/1362
 
-    @property  # type: ignore
+    @property
     @deprecate_property("0.1.0")
     def property1(self) -> int:
         """property1 get"""
         return self._value
 
-    @property1.setter  # type: ignore
+    @property1.setter
     @deprecate_property(
         "0.1.0", new_name="new_property", additional_msg="and some additional information"
     )
@@ -511,6 +528,28 @@ class TestDeprecation(QiskitNatureTestCase):
             obj.property1 = 0
             self.assertEqual(0, obj.property1)
             self.assertListEqual(c_m, [])
+
+    def test_function_positional(self):
+        """test function positional deprecation"""
+
+        # pylint: disable=too-many-function-args
+        with warnings.catch_warnings(record=True) as c_m:
+            warnings.simplefilter("always")
+            value = function_positional(1, 2, 3, 4)
+            self.assertEqual(10, value)
+            for idx, name in enumerate(["b", "d"]):
+                msg_ref = (
+                    f"function_positional: {name} is no longer a positional argument "
+                    "as of version 0.1 and will be removed no sooner "
+                    "than 3 months after the release. Instead use it as a keyword argument"
+                )
+                msg = str(c_m[idx].message)
+                self.assertEqual(msg, msg_ref)
+                self.assertTrue("test_deprecation.py" in c_m[idx].filename, c_m[idx].filename)
+                self.assertEqual(
+                    self._get_line_from_str("value = function_positional(1, 2, 3, 4)"),
+                    c_m[0].lineno,
+                )
 
 
 if __name__ == "__main__":
